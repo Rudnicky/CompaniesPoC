@@ -5,6 +5,7 @@ using CompaniesPoC.Core.Models.DTO;
 using CompaniesPoC.Core.Utils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 
@@ -165,6 +166,80 @@ namespace CompaniesPoC.Persistence.Managers
                 {
                     results.StatusCode = HttpStatusCode.OK;
                     results.Result = "Company updated successfully";
+                }
+            }
+            catch (Exception ex)
+            {
+                results.StatusCode = HttpStatusCode.InternalServerError;
+                results.Message = ex.Message;
+            }
+
+            return results;
+        }
+
+        public async Task<CustomResults<IEnumerable<CompanyDTO>>> Search(CompanySearch search)
+        {
+            var results = new CustomResults<IEnumerable<CompanyDTO>>();
+
+            try
+            {
+                var companies = await _companyRepository.GetAll();
+                if (companies.NotNullOrEmpty())
+                {
+                    var filteredCompanies = new List<Company>();
+
+                    if (!string.IsNullOrEmpty(search.Keyword))
+                    {
+                        filteredCompanies = companies.Where(x =>
+                            x.Employees != null && x.Employees.Any(e => e.Name == search.Keyword) ||
+                            x.Employees != null && x.Employees.Any(e => e.Surname == search.Keyword) ||
+                            x.Name == search.Keyword).ToList();
+                    }
+
+                    if (search.EmployeeDateOfBirthFrom != null)
+                    {
+                        filteredCompanies = companies.Where(x => x.Employees != null && x.Employees.Any(e => e.BirthDate > search.EmployeeDateOfBirthFrom)).ToList();
+                    }
+
+                    if (search.EmployeeDateOfBirthTo != null)
+                    {
+                        filteredCompanies = companies.Where(x => x.Employees != null && x.Employees.Any(e => e.BirthDate < search.EmployeeDateOfBirthTo)).ToList();
+                    }
+
+                    if (!string.IsNullOrEmpty(search.EmployeeJobTitle))
+                    {
+                        if (Enum.TryParse(search.EmployeeJobTitle, out JobTitle jobTitle))
+                        {
+                            filteredCompanies = companies.Where(x => x.Employees != null && x.Employees.Any(e => e.JobTitle == jobTitle)).ToList();
+                        }
+                        else
+                        {
+                            results.StatusCode = HttpStatusCode.BadRequest;
+                            results.Message = $"There's no such a job title like: {search.EmployeeJobTitle}";
+                            return results;
+                        }
+                    }
+
+                    filteredCompanies = filteredCompanies.Distinct().ToList();
+                    if (filteredCompanies.Count == 0)
+                    {
+                        results.StatusCode = HttpStatusCode.OK;
+                        results.Message = $"No companies are found under such criteria.";
+                        return results;
+                    }
+
+                    var mappedCompanies = _mapper.Map<List<CompanyDTO>>(filteredCompanies);
+                    if (mappedCompanies != null)
+                    {
+                        results.StatusCode = HttpStatusCode.OK;
+                        results.Message = $"Found {filteredCompanies.Count} objects";
+                        results.Result = mappedCompanies;
+                    }
+                }
+                else
+                {
+                    results.StatusCode = HttpStatusCode.InternalServerError;
+                    results.Message = Consts.DATABASE_FETCH_ERROR;
                 }
             }
             catch (Exception ex)

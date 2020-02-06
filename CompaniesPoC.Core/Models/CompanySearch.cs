@@ -7,6 +7,6 @@ namespace CompaniesPoC.Core.Models
         public string Keyword { get; set; }
         public DateTime? EmployeeDateOfBirthFrom { get; set; }
         public DateTime? EmployeeDateOfBirthTo { get; set; }
-        public string[] EmployeeJobTitles { get; set; }
+        public string EmployeeJobTitle { get; set; }
     }
 }
