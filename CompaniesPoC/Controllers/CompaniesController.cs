@@ -1,6 +1,7 @@
 ﻿using CompaniesPoC.Core.Interfaces;
 using CompaniesPoC.Core.Models;
 using CompaniesPoC.Core.Models.DTO;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -9,6 +10,7 @@ using System.Threading.Tasks;
 
 namespace CompaniesPoC.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class CompaniesController : ControllerBase
