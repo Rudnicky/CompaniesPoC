@@ -9,7 +9,7 @@ namespace CompaniesPoC.Core.Interfaces
         Task<T> Get(long Id);
         Task<IEnumerable<T>> GetAll();
         Task<long> Add(T entity);
-        void Delete(T entity);
-        void Update(T entity);
+        Task Delete(T entity);
+        Task Update(T entity);
     }
 }

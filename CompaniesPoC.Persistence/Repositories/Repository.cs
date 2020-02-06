@@ -24,10 +24,10 @@ namespace CompaniesPoC.Persistence.Repositories
             return entity.Id;
         }
 
-        public void Delete(T entity)
+        public async Task Delete(T entity)
         {
             _context.Set<T>().Remove(entity);
-            _context.SaveChanges();
+            _context.SaveChangesAsync();
         }
 
         public async Task<T> Get(long Id)
@@ -40,10 +40,10 @@ namespace CompaniesPoC.Persistence.Repositories
             return await _context.Set<T>().ToListAsync();
         }
 
-        public void Update(T entity)
+        public async Task Update(T entity)
         {
             _context.Set<T>().Update(entity);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
         }
     }
 }

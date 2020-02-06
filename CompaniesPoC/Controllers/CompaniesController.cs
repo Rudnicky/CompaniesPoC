@@ -1,14 +1,8 @@
-﻿using AutoMapper;
-using CompaniesPoC.Core.Interfaces;
+﻿using CompaniesPoC.Core.Interfaces;
 using CompaniesPoC.Core.Models;
 using CompaniesPoC.Core.Models.DTO;
-using CompaniesPoC.Core.Utils;
-using CompaniesPoC.Persistence;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 
@@ -18,154 +12,86 @@ namespace CompaniesPoC.Controllers
     [ApiController]
     public class CompaniesController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
-        private readonly ICompanyRepository _companyRepository;
-        private readonly IMapper _mapper;
+        private readonly ICompanyManager _companyManager;
 
-        public CompaniesController(ICompanyRepository companyRepository, IMapper mapper)
+        public CompaniesController(ICompanyManager companyManager)
         {
-            _companyRepository = companyRepository;
-            _mapper = mapper;
+            _companyManager = companyManager;
         }
 
-        // GET: api/Companies
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Company>>> GetCompanies()
         {
-            try
+            var results = await _companyManager.GetAll();
+
+            if (results.StatusCode == HttpStatusCode.OK)
             {
-                var companies = await _companyRepository.GetAll();
-                if (companies.NotNullOrEmpty())
-                {
-                    var mappedCompanies = _mapper.Map<List<CompanyDTO>>(companies);
-                    if (mappedCompanies != null)
-                    {
-                        return Ok(mappedCompanies);
-                    }
-                }
+                return Ok(results.Result);
             }
-            catch (Exception)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError);
-            }
-            return NotFound();
+
+            return NotFound(results.Message);
         }
 
         [HttpPost("create")]
-        public async Task<ActionResult<CompanyDTO>> PostCompany([FromBody]CompanyDTO company)
+        public async Task<ActionResult<string>> PostCompany([FromBody]CompanyDTO company)
         {
-            try
+            var results = await _companyManager.Add(company);
+            if (!string.IsNullOrEmpty(results.Result))
             {
-                // to wszystko ma pojsc do DaO managera
-                if (company != null)
-                {
-                    var outputMessage = string.Empty;
-
-                    if (string.IsNullOrEmpty(company.Name))
-                    {
-                        return BadRequest("Name cannot but null or empty!");
-                    }
-
-                    if (company.EstablishmentYear <= -1)
-                    {
-                        return BadRequest("Establishment year lower then zero? can't be.");
-                    }
-
-                    if (company.Id != 0)
-                    {
-                        outputMessage = "Passed ID will be ignored since ORM is creating ID automatically. ";
-                    }
-
-                    var isDuplicated = await _companyRepository.FindByName(company.Name);
-                    if (isDuplicated != null)
-                    {
-                        return BadRequest("Company with that name already exists");
-                    }
-
-                    var mappedCompany = _mapper.Map<Company>(company);
-                    if (mappedCompany != null)
-                    {
-                        var result = await _companyRepository.Add(mappedCompany);
-                        if (result != -1)
-                        {
-                            return Ok(outputMessage + result);
-                        }
-                    }
-                }
+                return Ok(results.Result);
             }
-            catch (Exception)
+            else if (results.StatusCode == HttpStatusCode.BadRequest)
             {
-                return StatusCode((int)HttpStatusCode.InternalServerError);
+                return BadRequest(results.Message);
             }
-
-            return BadRequest();
+            else
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, results.Message);
+            }
         }
 
-        // GET: api/Companies/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Company>> GetCompany(long id)
+        [HttpPut("update/{id}")]
+        public async Task<ActionResult<string>> PutCompany([FromBody]CompanyDTO company, long id)
         {
-            var company = await _context.Companies.FindAsync(id);
-
-            if (company == null)
+            var results = await _companyManager.Update(company, id);
+            if (!string.IsNullOrEmpty(results.Result))
             {
-                return NotFound();
+                return Ok(results.Result);
             }
-
-            return company;
+            else if (results.StatusCode == HttpStatusCode.BadRequest)
+            {
+                return BadRequest(results.Message);
+            }
+            else if (results.StatusCode == HttpStatusCode.NotFound)
+            {
+                return NotFound(results.Message);
+            }
+            else
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, results.Message);
+            }
         }
 
-        // PUT: api/Companies/5
-        // To protect from overposting attacks, please enable the specific properties you want to bind to, for
-        // more details see https://aka.ms/RazorPagesCRUD.
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutCompany(long id, Company company)
+        [HttpDelete("delete/{id}")]
+        public async Task<ActionResult<string>> DeleteCompany(long id)
         {
-            if (id != company.Id)
+            var results = await _companyManager.Delete(id);
+            if (!string.IsNullOrEmpty(results.Result))
             {
-                return BadRequest();
+                return Ok(results.Result);
             }
-
-            _context.Entry(company).State = EntityState.Modified;
-
-            try
+            else if (results.StatusCode == HttpStatusCode.BadRequest)
             {
-                await _context.SaveChangesAsync();
+                return BadRequest(results.Message);
             }
-            catch (DbUpdateConcurrencyException)
+            else if (results.StatusCode == HttpStatusCode.NotFound)
             {
-                if (!CompanyExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return NotFound(results.Message);
             }
-
-            return NoContent();
-        }
-
-        // DELETE: api/Companies/5
-        [HttpDelete("{id}")]
-        public async Task<ActionResult<Company>> DeleteCompany(long id)
-        {
-            var company = await _context.Companies.FindAsync(id);
-            if (company == null)
+            else
             {
-                return NotFound();
+                return StatusCode((int)HttpStatusCode.InternalServerError, results.Message);
             }
-
-            _context.Companies.Remove(company);
-            await _context.SaveChangesAsync();
-
-            return company;
-        }
-
-        private bool CompanyExists(long id)
-        {
-            return _context.Companies.Any(e => e.Id == id);
         }
     }
 }

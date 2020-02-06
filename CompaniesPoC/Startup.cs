@@ -1,6 +1,7 @@
 using AutoMapper;
 using CompaniesPoC.Core.Interfaces;
 using CompaniesPoC.Persistence;
+using CompaniesPoC.Persistence.Managers;
 using CompaniesPoC.Persistence.Repositories;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -25,6 +26,7 @@ namespace CompaniesPoC
         {
             services.AddDbContext<ApplicationDbContext>(opt => opt.UseInMemoryDatabase("PumoxGmbHDB"));
             services.AddScoped<ICompanyRepository, CompanyRepository>();
+            services.AddScoped<ICompanyManager, CompanyManager>();
             services.AddAutoMapper(typeof(Core.Mappers.MapperConfiguration));
             services.AddControllers();
         }
